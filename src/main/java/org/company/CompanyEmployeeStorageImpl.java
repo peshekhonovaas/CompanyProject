@@ -1,10 +1,9 @@
 package org.company;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -14,10 +13,10 @@ import java.util.stream.Collectors;
  * </p>
  */
 public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
-    private static Logger LOGGER = LoggerFactory.getLogger(CompanyEmployeeStorageImpl.class);
-    private Map<Long, Employee> employees;
-    private Map<Employee, Integer> reportingLineMap;
-    private Map<Long, List<Double>> subordinateSalaryMap;
+    private final static Logger LOGGER = Logger.getLogger(CompanyEmployeeStorageImpl.class.getName());
+    private final Map<Long, Employee> employees;
+    private final Map<Employee, Integer> reportingLineMap;
+    private final Map<Long, List<Double>> subordinateSalaryMap;
 
     public CompanyEmployeeStorageImpl() {
         this.employees = new HashMap<>();
@@ -70,7 +69,7 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
                             employee -> this.getReportLine(employee, 1)
                     ));
         }  catch (IllegalStateException ex) {
-            LOGGER.error("Failed to calculate company structure: {}", ex.getMessage(), ex);
+            LOGGER.log(Level.SEVERE, String.format("Failed to calculate company structure: %s", ex.getMessage()), ex);
             return Map.of();
         }
     }

@@ -1,18 +1,17 @@
 package org.company;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-class CompanyEmployeeStorageImplTest {
+public class CompanyEmployeeStorageImplTest {
     private CompanyEmployeeStorage storage;
     private List<Employee> employees;
 
-    @BeforeEach
+    @Before
     public void setUp() {
         this.storage = new CompanyEmployeeStorageImpl();
         this.employees = List.of(
@@ -24,34 +23,34 @@ class CompanyEmployeeStorageImplTest {
     }
 
     @Test
-    void testCalculateCompanyStructure() {
+    public void testCalculateCompanyStructure() {
         this.employees.forEach(employee -> this.storage.addEmployee(employee));
         final Map<Employee, Integer> reportingLineMap = this.storage.calculateCompanyStructure();
-        assertNotNull(reportingLineMap);
+        Assert.assertNotNull(reportingLineMap);
 
-        assertEquals(0, reportingLineMap.get(this.employees.get(0)));
-        assertEquals(1, reportingLineMap.get(this.employees.get(1)));
-        assertEquals(1, reportingLineMap.get(this.employees.get(2)));
-        assertEquals(2, reportingLineMap.get(this.employees.get(3)));
-        assertEquals(3, reportingLineMap.get(this.employees.get(4)));
+        Assert.assertEquals(Integer.valueOf(0), reportingLineMap.get(this.employees.get(0)));
+        Assert.assertEquals(Integer.valueOf(1), reportingLineMap.get(this.employees.get(1)));
+        Assert.assertEquals(Integer.valueOf(1), reportingLineMap.get(this.employees.get(2)));
+        Assert.assertEquals(Integer.valueOf(2), reportingLineMap.get(this.employees.get(3)));
+        Assert.assertEquals(Integer.valueOf(3), reportingLineMap.get(this.employees.get(4)));
     }
 
     @Test
-    void testEmptyCalculateCompanyStructure() {
+    public void testEmptyCalculateCompanyStructure() {
         final Map<Employee, Integer> reportingLineMap = this.storage.calculateCompanyStructure();
-        assertNotNull(reportingLineMap);
-        assertTrue(reportingLineMap.isEmpty());
+        Assert.assertNotNull(reportingLineMap);
+        Assert.assertTrue(reportingLineMap.isEmpty());
     }
 
     @Test
-    void testManagersWithFilterBySalary() {
+    public void testManagersWithFilterBySalary() {
         this.employees.forEach(employee -> this.storage.addEmployee(employee));
         final Map<Employee, Double> poorManagers = this.storage.getManagersWithFilterBySalary(
                 (managerSalary, avgSubordinateSalary) -> (managerSalary < avgSubordinateSalary) ?
                         avgSubordinateSalary - managerSalary : 0.0);
-        assertNotNull(poorManagers);
-        assertEquals(1, poorManagers.size());
-        assertTrue(poorManagers.keySet().contains(this.employees.get(1)));
-        assertEquals(5000.0, poorManagers.get(this.employees.get(1)));
+        Assert.assertNotNull(poorManagers);
+        Assert.assertEquals(1, poorManagers.size());
+        Assert.assertTrue(poorManagers.containsKey(this.employees.get(1)));
+        Assert.assertEquals(Double.valueOf(5000.0), poorManagers.get(this.employees.get(1)));
     }
 }

@@ -1,22 +1,17 @@
 package org.company;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.*;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
  *  Class representing a company management service
  */
 public class CompanyManagement {
-    private static Logger LOGGER = LoggerFactory.getLogger(CompanyManagement.class);
+    private final static Logger LOGGER = Logger.getLogger(CompanyManagement.class.getName());
     private CompanyEmployeeStorage companyEmployeeStorage;
 
     /**
@@ -25,21 +20,24 @@ public class CompanyManagement {
      */
     public void addNewEmployees(final String filePath) {
         this.companyEmployeeStorage = new CompanyEmployeeStorageImpl();
+        String line;
 
-        try (final Reader reader = Files.newBufferedReader(Paths.get(filePath));
-             final CSVParser csvParser = CSVFormat.RFC4180.builder().setHeader().setSkipHeaderRecord(true).build().parse(reader)) {
-            for (final CSVRecord csvRecord : csvParser) {
-                final Long id = Optional.ofNullable(csvRecord.get("Id")).filter(s -> !s.isEmpty())
+        try (final BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            br.readLine();
+            while ((line = br.readLine()) != null) {
+                final String[] values = line.split(",");
+                final Long id = Optional.ofNullable(values[0]).filter(s -> !s.isEmpty())
                         .map(Long::valueOf).orElse(null);
-                final Double salary = Optional.ofNullable(csvRecord.get("salary")).filter(s -> !s.isEmpty())
+                final String firstName = values[1];
+                final String lastName = values[2];
+                final Double salary = Optional.ofNullable(values[3]).filter(s -> !s.isEmpty())
                         .map(Double::valueOf).orElse(null);
-                final Long managerId = Optional.ofNullable(csvRecord.get("managerId")).filter(s -> !s.isEmpty())
-                        .map(Long::valueOf).orElse(null);
-                this.companyEmployeeStorage.addEmployee(id, csvRecord.get("firstName"),
-                        csvRecord.get("lastName"), salary, managerId);
+                final Long managerId = (values.length > 4) ? Optional.ofNullable(values[4]).filter(s -> !s.isEmpty())
+                        .map(Long::valueOf).orElse(null) : null;
+                this.companyEmployeeStorage.addEmployee(id, firstName, lastName, salary, managerId);
             }
-        } catch (Exception ex) {
-            LOGGER.error("Failed to process file at '{}'", filePath, ex);
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, String.format("Failed to process file at: %s", filePath), ex);
         }
     }
 
