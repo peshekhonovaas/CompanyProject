@@ -1,4 +1,6 @@
-package org.company;
+package org.company.storage;
+
+import org.company.models.Employee;
 
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -10,16 +12,6 @@ import java.util.function.BiFunction;
  * </p>
  */
 public interface CompanyEmployeeStorage {
-    /**
-     * Add an employee to the company structure
-     * @param id the employee identifier
-     * @param firstName the first name of the employee
-     * @param lastName the last name of the employee
-     * @param salary the salary of the employee
-     * @param managerId the manager identifier of the employee
-     */
-    void addEmployee(Long id, String firstName, String lastName, Double salary, Long managerId);
-
     /**
      * Add an employee to the company structure
      * @param newEmployee the new employee instance
@@ -38,4 +30,10 @@ public interface CompanyEmployeeStorage {
      * @return the map where a key is a manager and a result of the salary comparison
      */
     Map<Employee, Double> getManagersWithFilterBySalary(BiFunction<Double, Double, Double> salaryComparisonFunction);
+
+    /**
+     * Checks if a CEO has been defined in the company structure
+     * @return true if a CEO is defined, otherwise false
+     */
+    boolean isCEODefined();
 }

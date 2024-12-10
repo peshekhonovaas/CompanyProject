@@ -1,7 +1,10 @@
-package org.company;
+package org.company.storage;
+
+import org.company.models.Employee;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -15,6 +18,7 @@ import java.util.stream.Collectors;
 public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
     private final static Logger LOGGER = Logger.getLogger(CompanyEmployeeStorageImpl.class.getName());
     private final Map<Long, Employee> employees;
+    private final Employee ceo;
     private final Map<Employee, Integer> reportingLineMap;
     private final Map<Long, List<Double>> subordinateSalaryMap;
 
@@ -22,6 +26,7 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
         this.employees = new HashMap<>();
         this.reportingLineMap = new HashMap<>();
         this.subordinateSalaryMap = new HashMap<>();
+        this.ceo = null;
     }
 
     /**
@@ -30,34 +35,16 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
      */
     @Override
     public void addEmployee(final Employee newEmployee){
-        this.employees.put(newEmployee.getId(), newEmployee);
-        if (Objects.nonNull(newEmployee.getManagerId())) {
-            this.subordinateSalaryMap.putIfAbsent(newEmployee.getManagerId(), new ArrayList<>());
-            this.subordinateSalaryMap.get(newEmployee.getManagerId()).add(newEmployee.getSalary());
+        this.employees.put(newEmployee.id(), newEmployee);
+        if (Objects.nonNull(newEmployee.managerId())) {
+            this.subordinateSalaryMap.putIfAbsent(newEmployee.managerId(), new ArrayList<>());
+            this.subordinateSalaryMap.get(newEmployee.managerId()).add(newEmployee.salary());
         }
     }
 
     /**
-     * Add an employee to the company structure
-     * @param id the employee identifier
-     * @param firstName the first name of the employee
-     * @param lastName the last name of the employee
-     * @param salary the salary of the employee
-     * @param managerId the manager identifier of the employee
-     */
-    @Override
-    public void addEmployee(final Long id, final String firstName, final String lastName,
-                            final Double salary, final Long managerId){
-        final Employee newEmployee = new Employee(id, firstName, lastName, salary, managerId);
-        this.employees.put(id, newEmployee);
-        if (Objects.nonNull(newEmployee.getManagerId())) {
-            this.subordinateSalaryMap.putIfAbsent(newEmployee.getManagerId(), new ArrayList<>());
-            this.subordinateSalaryMap.get(newEmployee.getManagerId()).add(newEmployee.getSalary());
-        }
-    }
-
-    /**
-     * Calculate the structure of the company that provides a length of a reporting line for every employee
+     * Calculate the structure of the company that provides a length of a reporting line for every employee.
+     * The reporting line depth is the number of levels up to the CEO.
      * @return the map where a key is employee and value is a length of reporting line
      */
     @Override
@@ -65,12 +52,12 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
         try {
             return employees.values().stream()
                     .collect(Collectors.toMap(
-                            employee -> employee,
-                            employee -> this.getReportLine(employee, 1)
+                            Function.identity(),
+                            employee -> this.calculateReportingLineDepth(employee, 1)
                     ));
         }  catch (IllegalStateException ex) {
-            LOGGER.log(Level.SEVERE, String.format("Failed to calculate company structure: %s", ex.getMessage()), ex);
-            return Map.of();
+            LOGGER.log(Level.WARNING, String.format("Failed to calculate company structure: %s", ex.getMessage()), ex);
+            return Collections.emptyMap();
         }
     }
 
@@ -82,14 +69,15 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
      * @throws IllegalStateException if recursion exceeds a maximum allowed depth (count of employees).
      * Need to avoid an endless loop.
      */
-    private Integer getReportLine(final Employee employee, final int recursionDepth) throws IllegalStateException {
+    private Integer calculateReportingLineDepth(final Employee employee, final int recursionDepth) throws IllegalStateException {
         if (recursionDepth > employees.size()) {
             throw new IllegalStateException(String.format("Exceeded maximum allowed depth %s", employees.size()));
         }
-        if (Objects.isNull(employee.getManagerId())) return 0;
+        if (Objects.isNull(employee.managerId())) return 0;
         if (this.reportingLineMap.containsKey(employee))
             return this.reportingLineMap.get(employee);
-        int depth = 1 + this.getReportLine(this.employees.get(employee.getManagerId()), recursionDepth + 1);
+        final Employee manager = employees.get(employee.managerId());
+        int depth = 1 + this.calculateReportingLineDepth(manager, recursionDepth + 1);
         this.reportingLineMap.put(employee, depth);
         return depth;
     }
@@ -101,19 +89,28 @@ public class CompanyEmployeeStorageImpl implements CompanyEmployeeStorage{
      */
     @Override
     public Map<Employee, Double> getManagersWithFilterBySalary(final BiFunction<Double, Double, Double> salaryComparisonFunction) {
-        return this.subordinateSalaryMap.entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        entry -> this.employees.get(entry.getKey()),
-                        entry -> {
-                            double avgSubordinateSalary = entry.getValue().stream()
-                                    .mapToDouble(Double::doubleValue).average().orElse(0.0);
-                            double managerSalary = employees.get(entry.getKey()).getSalary();
-                            return salaryComparisonFunction.apply(managerSalary, avgSubordinateSalary);
-                        }))
-                .entrySet()
-                .stream()
+        return this.subordinateSalaryMap.entrySet().stream()
+                .map(entry -> new AbstractMap.SimpleEntry<>(
+                        this.employees.get(entry.getKey()),
+                        this.calculateAverageDifference(entry, salaryComparisonFunction)
+                ))
                 .filter(entry -> entry.getValue() > 0.0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private Double calculateAverageDifference(final Map.Entry<Long, List<Double>> entry, final BiFunction<Double, Double, Double> salaryComparisonFunction) {
+        double avgSubordinateSalary = entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        double managerSalary = employees.get(entry.getKey()).salary();
+        return salaryComparisonFunction.apply(managerSalary, avgSubordinateSalary);
+    }
+
+    /**
+     * Checks if a CEO has been defined in the company structure
+     *
+     * @return true if a CEO is defined, otherwise false
+     */
+    @Override
+    public boolean isCEODefined() {
+        return Objects.nonNull(this.ceo);
     }
 }

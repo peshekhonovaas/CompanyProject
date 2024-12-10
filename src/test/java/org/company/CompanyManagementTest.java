@@ -1,10 +1,13 @@
 package org.company;
 
+import org.company.models.Employee;
+import org.company.models.SalaryComparisonType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class CompanyManagementTest {
     private final static String VALID_PATH = "src/test/resources/test_data_10.csv";
@@ -25,33 +28,35 @@ public class CompanyManagementTest {
     @Test
     public void testAddNewEmployeesFails() {
         this.companyManagement.addNewEmployees("src/test/resources/test_data_invalid.csv");
-        final Map<Employee, Integer> employeesWithTooLongReportingLine = this.companyManagement.getEmployeesWithTooLongReportingLine();
+        final Map<Employee, Integer> employeesWithTooLongReportingLine =
+                this.companyManagement.getEmployeesWithTooLongReportingLine();
         Assert.assertTrue(employeesWithTooLongReportingLine.isEmpty());
     }
 
     @Test
     public void testGetManagersWithBigSalary() {
         this.companyManagement.addNewEmployees(VALID_PATH);
-        final Map<Employee, Double> managersWithFilterBySalary = this.companyManagement.getManagersWithBigSalary();
-        Assert.assertTrue(!managersWithFilterBySalary.isEmpty());
-        Assert.assertEquals(1, managersWithFilterBySalary.keySet().stream().filter(employee -> employee.getId() == 9).count());
+        final Optional<Map<Employee, Double>> managersWithFilterBySalary =
+                this.companyManagement.getManagersWithSalaryDifference(SalaryComparisonType.BIG);
+        Assert.assertTrue(managersWithFilterBySalary.isPresent());
+        Assert.assertEquals(1, managersWithFilterBySalary.get().keySet()
+                .stream().filter(employee -> employee.id() == 9).count());
     }
-
     @Test
     public void testGetManagersWithSmallSalary() {
         this.companyManagement.addNewEmployees(VALID_PATH);
-        final Map<Employee, Double> managersWithFilterBySalary = this.companyManagement.getManagersWithSmallSalary();
-        Assert.assertTrue(!managersWithFilterBySalary.isEmpty());
-        Assert.assertTrue(managersWithFilterBySalary.size() == 3);
-        Assert.assertEquals(1,  managersWithFilterBySalary.keySet().stream().filter(employee -> employee.getId() == 7).count());
+        final Optional<Map<Employee, Double>> managersWithFilterBySalary = this.companyManagement.getManagersWithSalaryDifference(SalaryComparisonType.SMALL);
+        Assert.assertTrue(managersWithFilterBySalary.isPresent());
+        Assert.assertEquals(3, managersWithFilterBySalary.get().size());
+        Assert.assertEquals(1,  managersWithFilterBySalary.get().keySet().stream().filter(employee -> employee.id() == 7).count());
     }
 
     @Test
     public void testGetEmployeesWithTooLongReportingLine(){
         this.companyManagement.addNewEmployees(VALID_PATH);
         final Map<Employee, Integer> employeesWithTooLongReportingLine = this.companyManagement.getEmployeesWithTooLongReportingLine();
-        Assert.assertTrue(!employeesWithTooLongReportingLine.isEmpty());
-        Assert.assertTrue(employeesWithTooLongReportingLine.size() == 1);
-        Assert.assertEquals(1,  employeesWithTooLongReportingLine.keySet().stream().filter(employee -> employee.getId() == 2).count());
+        Assert.assertFalse(employeesWithTooLongReportingLine.isEmpty());
+        Assert.assertEquals(1,employeesWithTooLongReportingLine.size());
+        Assert.assertEquals(1,  employeesWithTooLongReportingLine.keySet().stream().filter(employee -> employee.id() == 2).count());
     }
 }

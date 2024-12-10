@@ -1,5 +1,8 @@
 package org.company;
 
+import org.company.models.Employee;
+import org.company.storage.CompanyEmployeeStorage;
+import org.company.storage.CompanyEmployeeStorageImpl;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
